@@ -1,0 +1,28 @@
+# Use PHP 8.4 FPM image as the base
+FROM php:8.4-fpm
+
+# Install required dependencies for PostgreSQL and PHP extensions
+RUN apt-get update && apt-get install -y \
+    libpq-dev \
+    && docker-php-ext-install pdo_pgsql pgsql \
+    && apt-get clean
+
+# Set environment variables for database connection
+ENV DB_USER=your_user
+ENV DB_PASSWORD=your_password
+ENV DB_NAME=your_db_name
+
+# Copy application files into the container's web directory
+COPY ./html /usr/share/nginx/html
+
+# Copy custom php.ini (if required)
+COPY ./php.ini /usr/local/etc/php/
+
+# Set the working directory
+WORKDIR /usr/share/nginx/html
+
+# Expose the port for PHP-FPM (port 9000 is the default for PHP-FPM)
+EXPOSE 9000
+
+# Start PHP-FPM
+CMD ["php-fpm"]

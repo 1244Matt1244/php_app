@@ -1,0 +1,47 @@
+services:
+  php-app:
+    build: .  # Builds the PHP app from the Dockerfile in the current directory
+    container_name: php-app
+    volumes:
+      - ./html:/usr/share/nginx/html  # Mounts the HTML files for Nginx
+    environment:
+      POSTGRES_HOST: postgres-db  # Matches the service name of the PostgreSQL container
+      POSTGRES_USER: ${POSTGRES_USER}  # Use environment variable for better security
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}  # Use environment variable for better security
+      POSTGRES_DB: ${POSTGRES_DB}  # Use environment variable for better security
+    networks:
+      - app-network
+    depends_on:
+      - postgres-db  # Ensures the database starts before PHP app
+
+  nginx-web:
+    image: nginx:latest  # Uses the latest Nginx image
+    container_name: nginx-web
+    volumes:
+      - ./html:/usr/share/nginx/html  # Mounts the same HTML directory as PHP container
+      - ./nginx.conf:/etc/nginx/nginx.conf  # Custom Nginx configuration
+    depends_on:
+      - php-app  # Ensures PHP app is started before Nginx
+    ports:
+      - "8080:80"  # Maps container's port 80 to host's port 8080
+    networks:
+      - app-network
+
+  postgres-db:
+    image: postgres:14  # Specifies PostgreSQL 14 image
+    container_name: postgres-db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}  # Use environment variable for better security
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}  # Use environment variable for better security
+      POSTGRES_DB: ${POSTGRES_DB}  # Use environment variable for better security
+    volumes:
+      - postgres-db-data:/var/lib/postgresql/data  # Persistent storage for database
+    networks:
+      - app-network
+
+volumes:
+  postgres-db-data:  # Volume to persist PostgreSQL data
+
+networks:
+  app-network:
+    driver: bridge  # Defines the network for communication between services
