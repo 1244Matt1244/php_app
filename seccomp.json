@@ -3,16 +3,24 @@
   "syscalls": [
     {
       "names": [
-        "accept",
-        "epoll_wait",
-        "read",
-        "write",
-        "close",
-        "futex",
-        "poll",
-        "clock_gettime"
+        "accept", "epoll_wait", "read", "write", "close",
+        "poll", "clock_gettime", "fstat", "lseek", "mmap",
+        "mprotect", "munmap", "brk", "rt_sigaction",
+        "rt_sigprocmask", "clone", "execve", "arch_prctl",
+        "access", "getdents", "getpid", "getuid", "getgid",
+        "open", "openat", "socket", "connect", "bind",
+        "listen", "sendto", "recvfrom", "fcntl", "dup",
+        "dup2", "prlimit64", "getrandom"
       ],
       "action": "SCMP_ACT_ALLOW"
+    },
+    {
+      "names": [
+        "ptrace", "reboot", "swapon", "swapoff", "syslog",
+        "personality", "uselib", "init_module", "delete_module",
+        "keyctl", "iopl", "ioperm"
+      ],
+      "action": "SCMP_ACT_KILL_PROCESS"
     }
   ]
 }
