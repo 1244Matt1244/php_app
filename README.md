@@ -1,5 +1,3 @@
----
-
 ```markdown
 # Project Name: PHP + Nginx + PostgreSQL Docker Setup
 
