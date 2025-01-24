@@ -1,28 +1,31 @@
-# Use PHP 8.4 FPM image as the base
-FROM php:8.4-fpm
+# Koristimo službeni PHP-FPM image s Debianom (zadržavamo bazni image)
+FROM php:8.3-fpm
 
-# Install required dependencies for PostgreSQL and PHP extensions
+# Instaliramo ovisnosti i čistimo u istom RUN sloju za optimizaciju
 RUN apt-get update && apt-get install -y \
     libpq-dev \
     && docker-php-ext-install pdo_pgsql pgsql \
-    && apt-get clean
+    && apt-get clean -y \
+    && rm -rf /var/lib/apt/lists/*
 
-# Set environment variables for database connection
-ENV DB_USER=your_user
-ENV DB_PASSWORD=your_password
-ENV DB_NAME=your_db_name
+# Postavljamo defaultne env varijable (koristiti ćemo docker-compose za override)
+ENV DB_HOST=db
+ENV DB_USER=default_user
+ENV DB_PASSWORD=default_pass
+ENV DB_NAME=default_db
 
-# Copy application files into the container's web directory
+# Kopiramo aplikaciju (sa .dockerignore za nepotrebne datoteke)
 COPY ./html /usr/share/nginx/html
 
-# Copy custom php.ini (if required)
-COPY ./php.ini /usr/local/etc/php/
+# Kopiramo php.ini samo ako postoji (wildcard za izbjegavanje grešaka)
+COPY ./php.ini* /usr/local/etc/php/conf.d/
 
-# Set the working directory
+# Postavljamo radni direktorij i vlasnika
 WORKDIR /usr/share/nginx/html
+RUN chown -R www-data:www-data /usr/share/nginx/html
 
-# Expose the port for PHP-FPM (port 9000 is the default for PHP-FPM)
+# Eksplicitno eksponiramo PHP-FPM port
 EXPOSE 9000
 
-# Start PHP-FPM
-CMD ["php-fpm"]
+# Pokrećemo PHP-FPM u foreground modu
+CMD ["php-fpm", "-F"]
