@@ -1,47 +1,55 @@
+version: '3.8'
+
 services:
   php-app:
-    build: .  # Builds the PHP app from the Dockerfile in the current directory
+    build: .
     container_name: php-app
-    volumes:
-      - ./html:/usr/share/nginx/html  # Mounts the HTML files for Nginx
     environment:
-      POSTGRES_HOST: postgres-db  # Matches the service name of the PostgreSQL container
-      POSTGRES_USER: ${POSTGRES_USER}  # Use environment variable for better security
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}  # Use environment variable for better security
-      POSTGRES_DB: ${POSTGRES_DB}  # Use environment variable for better security
+      - DB_HOST=postgres-db
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME}
+    volumes:
+      - ./html:/var/www/html
     networks:
       - app-network
     depends_on:
-      - postgres-db  # Ensures the database starts before PHP app
+      postgres-db:
+        condition: service_healthy
 
   nginx-web:
-    image: nginx:latest  # Uses the latest Nginx image
+    image: nginx:alpine
     container_name: nginx-web
-    volumes:
-      - ./html:/usr/share/nginx/html  # Mounts the same HTML directory as PHP container
-      - ./nginx.conf:/etc/nginx/nginx.conf  # Custom Nginx configuration
-    depends_on:
-      - php-app  # Ensures PHP app is started before Nginx
     ports:
-      - "8080:80"  # Maps container's port 80 to host's port 8080
+      - "8080:80"
+    volumes:
+      - ./html:/var/www/html
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf
     networks:
       - app-network
+    depends_on:
+      - php-app
 
   postgres-db:
-    image: postgres:14  # Specifies PostgreSQL 14 image
+    image: postgres:14-alpine
     container_name: postgres-db
     environment:
-      POSTGRES_USER: ${POSTGRES_USER}  # Use environment variable for better security
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}  # Use environment variable for better security
-      POSTGRES_DB: ${POSTGRES_DB}  # Use environment variable for better security
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=${DB_NAME}
     volumes:
-      - postgres-db-data:/var/lib/postgresql/data  # Persistent storage for database
+      - postgres-data:/var/lib/postgresql/data
     networks:
       - app-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
 volumes:
-  postgres-db-data:  # Volume to persist PostgreSQL data
+  postgres-data:
 
 networks:
   app-network:
-    driver: bridge  # Defines the network for communication between services
+    driver: bridge
