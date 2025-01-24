@@ -2,30 +2,51 @@
 FROM php:8.3-fpm
 
 # Instaliramo ovisnosti i čistimo u istom RUN sloju za optimizaciju
-RUN apt-get update && apt-get install -y \
-    libpq-dev \
-    && docker-php-ext-install pdo_pgsql pgsql \
+RUN set -euxo pipefail && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends \
+        libpq-dev \
+        libzip-dev \
+        unzip \
+    && docker-php-ext-configure pgsql -with-pgsql=/usr/local/pgsql \
+    && docker-php-ext-install \
+        pdo_pgsql \
+        pgsql \
+        zip \
     && apt-get clean -y \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+# Kreiraj non-root user za bolju sigurnost
+RUN groupadd -g 1000 appuser && \
+    useradd -u 1000 -g appuser -m -d /home/appuser -s /bin/bash appuser && \
+    chown -R appuser:appuser /usr/share/nginx/html
 
 # Postavljamo defaultne env varijable (koristiti ćemo docker-compose za override)
-ENV DB_HOST=db
-ENV DB_USER=default_user
-ENV DB_PASSWORD=default_pass
-ENV DB_NAME=default_db
+ENV DB_HOST=db \
+    DB_USER=default_user \
+    DB_PASSWORD=default_pass \
+    DB_NAME=default_db \
+    PHP_MEMORY_LIMIT=256M \
+    PHP_MAX_EXECUTION_TIME=300
 
 # Kopiramo aplikaciju (sa .dockerignore za nepotrebne datoteke)
-COPY ./html /usr/share/nginx/html
+COPY --chown=appuser:appuser ./html /usr/share/nginx/html
 
 # Kopiramo php.ini samo ako postoji (wildcard za izbjegavanje grešaka)
 COPY ./php.ini* /usr/local/etc/php/conf.d/
 
 # Postavljamo radni direktorij i vlasnika
 WORKDIR /usr/share/nginx/html
-RUN chown -R www-data:www-data /usr/share/nginx/html
 
 # Eksplicitno eksponiramo PHP-FPM port
 EXPOSE 9000
 
-# Pokrećemo PHP-FPM u foreground modu
-CMD ["php-fpm", "-F"]
+# Health check za PHP-FPM status
+HEALTHCHECK --interval=30s --timeout=3s --retries=3 \
+    CMD curl -f http://localhost/ping || exit 1
+
+# Promjena na non-root user
+USER appuser
+
+# Pokrećemo PHP-FPM u foreground modu s pravilnim signal handlingom
+CMD ["php-fpm", "-F", "-R"]
