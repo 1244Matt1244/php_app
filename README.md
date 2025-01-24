@@ -1,4 +1,4 @@
-Here's the optimized English version of your README.md while preserving the original structure:
+---
 
 ```markdown
 # Project Name: PHP + Nginx + PostgreSQL Docker Setup
@@ -100,7 +100,6 @@ curl http://localhost:8080/status
 - Use `docker-compose.override.yml` for local development
 
 ---
-
 **License**: [MIT](LICENSE)  
 **Author**: Matej Martinović  
 **Version**: 1.1.0
