@@ -1,110 +1,130 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-# Function to start all services
-start() {
-  echo "$(date '+%Y-%m-%d %H:%M:%S') - Starting all services..."
-  if docker-compose up -d --build; then
-    echo "$(date '+%Y-%m-%d %H:%M:%S') - All services started successfully."
-  else
-    echo "$(date '+%Y-%m-%d %H:%M:%S') - Failed to start services."
+# Configuration
+WEB_SERVICE="nginx-web"
+TIMESTAMP="$(date '+%Y-%m-%d %H:%M:%S')"
+
+# Color codes
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
+
+# Enhanced logging
+log() {
+  local level=$1
+  local message=$2
+  case $level in
+    "info") echo -e "${GREEN}[INFO]${NC} $TIMESTAMP - $message" ;;
+    "warn") echo -e "${YELLOW}[WARN]${NC} $TIMESTAMP - $message" ;;
+    "error") echo -e "${RED}[ERROR]${NC} $TIMESTAMP - $message" >&2 ;;
+  esac
+}
+
+# Dependency checks
+check_dependencies() {
+  local missing=()
+  
+  if ! command -v docker &> /dev/null; then
+    missing+=("Docker")
+  fi
+
+  if ! command -v docker-compose &> /dev/null; then
+    missing+=("Docker Compose")
+  fi
+
+  if [[ ${#missing[@]} -gt 0 ]]; then
+    log error "Missing dependencies: ${missing[*]}"
+    exit 1
+  fi
+
+  if ! docker info &> /dev/null; then
+    log error "Docker daemon is not running"
     exit 1
   fi
 }
 
-# Function to stop all services
-stop() {
-  echo "$(date '+%Y-%m-%d %H:%M:%S') - Stopping all services..."
-  
-  read -p "Do you also want to remove volumes? This will delete all persisted data! (y/N): " confirm
-  if [[ $confirm == "y" || $confirm == "Y" ]]; then
-    if docker-compose down --volumes; then
-      echo "$(date '+%Y-%m-%d %H:%M:%S') - All services and volumes stopped and removed."
-    else
-      echo "$(date '+%Y-%m-%d %H:%M:%S') - Failed to stop and remove volumes."
-      exit 1
-    fi
+# Service management functions
+start_services() {
+  log info "Building and starting services..."
+  if docker-compose up -d --build; then
+    log info "Services started successfully"
   else
-    if docker-compose down; then
-      echo "$(date '+%Y-%m-%d %H:%M:%S') - All services stopped (volumes retained)."
-    else
-      echo "$(date '+%Y-%m-%d %H:%M:%S') - Failed to stop services."
-      exit 1
-    fi
+    log error "Failed to start services"
+    exit 1
   fi
 }
 
-# Function to check the status of services
-status() {
-  echo "$(date '+%Y-%m-%d %H:%M:%S') - Checking service status..."
+stop_services() {
+  local remove_volumes=false
+  log info "Stopping services..."
+  
+  read -p $'\e[33mRemove volumes? (y/N): \e[0m' -n 1 confirm
+  echo
+  [[ "$confirm" == [yY] ]] && remove_volumes=true
+
+  if $remove_volumes; then
+    log warn "Removing services and volumes..."
+    docker-compose down -v || {
+      log error "Failed to remove services and volumes"
+      exit 1
+    }
+  else
+    docker-compose down || {
+      log error "Failed to stop services"
+      exit 1
+    }
+  fi
+}
+
+service_status() {
+  log info "Current service status:"
   docker-compose ps
 }
 
-# Function to view the web server logs
-logs() {
-  echo "$(date '+%Y-%m-%d %H:%M:%S') - Viewing web server logs..."
-  docker-compose logs -f nginx-web
+view_logs() {
+  local service="${1:-$WEB_SERVICE}"
+  log info "Tailing logs for $service..."
+  docker-compose logs -f "$service"
 }
 
-# Function to view all container logs
-logs_all() {
-  echo "$(date '+%Y-%m-%d %H:%M:%S') - Viewing all service logs..."
-  docker-compose logs -f
+restart_services() {
+  log info "Restarting services..."
+  docker-compose down && docker-compose up -d --build || {
+    log error "Failed to restart services"
+    exit 1
+  }
 }
 
-# Function to restart all services
-restart() {
-  echo "$(date '+%Y-%m-%d %H:%M:%S') - Restarting all services..."
-  if docker-compose down && docker-compose up -d --build; then
-    echo "$(date '+%Y-%m-%d %H:%M:%S') - All services restarted successfully."
-  else
-    echo "$(date '+%Y-%m-%d %H:%M:%S') - Failed to restart services."
-    exit 1
-  fi
+# Main execution
+main() {
+  check_dependencies
+
+  case "$1" in
+    start)
+      start_services
+      ;;
+    stop)
+      stop_services
+      ;;
+    status)
+      service_status
+      ;;
+    logs)
+      view_logs "$2"
+      ;;
+    logs-all)
+      log info "Tailing all service logs..."
+      docker-compose logs -f
+      ;;
+    restart)
+      restart_services
+      ;;
+    *)
+      echo -e "${YELLOW}Usage:${NC} $0 {start|stop|status|logs [service]|logs-all|restart}"
+      exit 1
+      ;;
+  esac
 }
 
-# Function to check if Docker and Docker Compose are installed
-check_dependencies() {
-  if ! command -v docker-compose &> /dev/null; then
-    echo "docker-compose could not be found. Please install it."
-    exit 1
-  fi
-
-  if ! command -v docker &> /dev/null; then
-    echo "Docker could not be found. Please install it."
-    exit 1
-  fi
-
-  if ! systemctl is-active --quiet docker; then
-    echo "Docker service is not running. Please start Docker."
-    exit 1
-  fi
-}
-
-# Check dependencies
-check_dependencies
-
-# Handle script arguments
-case "$1" in
-  start)
-    start
-    ;;
-  stop)
-    stop
-    ;;
-  status)
-    status
-    ;;
-  logs)
-    logs
-    ;;
-  logs_all)
-    logs_all
-    ;;
-  restart)
-    restart
-    ;;
-  *)
-    echo "Usage: ./manage.sh {start|stop|status|logs|logs_all|restart}"
-    exit 1
-    ;;
-esac
+main "$@"
