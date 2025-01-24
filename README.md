@@ -1,143 +1,107 @@
-### `README.md`
+Here's the optimized English version of your README.md while preserving the original structure:
 
 ```markdown
 # Project Name: PHP + Nginx + PostgreSQL Docker Setup
 
-This project provides a fully functional environment for running a PHP application with Nginx as a reverse proxy, PHP-FPM for processing PHP, and PostgreSQL as the database. The setup uses Docker Compose to manage the services, making it easy to start, stop, and maintain the environment.
+![Docker](https://img.shields.io/badge/Docker-3.8%2B-blue)  
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-14%2B-brightgreen)  
 
-## Features
+Modern Docker setup for PHP applications with Nginx reverse proxy and PostgreSQL database. Managed through Docker Compose for easy deployment.
 
-- **PHP 8.4 FPM**: The project uses PHP 8.4 FPM to handle PHP requests efficiently.
-- **Nginx**: Nginx is used as the web server, configured to serve PHP applications and handle static assets.
-- **PostgreSQL**: A PostgreSQL database is available (optional), with environment variables for configuring the database connection.
-- **Security Headers**: The application includes optional security headers for better protection in production.
-- **Health Check Endpoint**: A `/health` endpoint is provided to check if the PHP-FPM service is running correctly.
-- **Error Handling**: Custom error pages for 404 and server errors are included.
+## Key Features 🚀
 
-## Prerequisites
+- **PHP 8.3 FPM** - Latest stable version with PostgreSQL extensions
+- **Nginx 1.25** - Optimized for performance and security
+- **PostgreSQL 14** - Relational DB with persistent storage
+- **Automated Management** - Bash script for start/stop/status
+- **Health Monitoring** - `/status` endpoint for DB checks
 
-- Docker (version 20.10+)
-- Docker Compose (version 1.29+)
+## Prerequisites 📋
 
-## Setup
+- Docker Engine 24.0+
+- Docker Compose 2.20+
+- 512 MB free RAM
+- Linux/Windows/macOS with WSL2
 
-### 1. Clone the Repository
-
-Clone this repository to your local machine:
+## Quick Start ⚡
 
 ```bash
-git clone https://github.com/yourusername/your-repository.git
-cd your-repository
+git clone https://github.com/1244Matt1244/php_app.git
+cd php_app
+cp .env.example .env  # Set credentials in .env file
+./manage.sh start
 ```
 
-### 2. Configuration
+Visit http://localhost:8080 in your browser
 
-#### Database Credentials
+## Configuration ⚙️
 
-Before you start the services, ensure that the database credentials in the `.env` file are properly configured:
-
-```env
-DB_USER=your_user
-DB_PASSWORD=your_password
-DB_NAME=your_db_name
-```
-
-#### `php.ini`
-
-This project uses a custom `php.ini` configuration to set various PHP settings, such as increasing the maximum execution time for PHP scripts. You can adjust the `php.ini` file located in the root directory of this project as needed.
-
-*Please be cautious when sharing the `php.ini` file with others, as it may contain sensitive data or paths related to your local development environment.*
-
-Example:
-
+### Basic Settings (`.env`)
 ```ini
-extension_dir = "C:/path/to/php/ext"
+# PostgreSQL
+POSTGRES_USER=app_user
+POSTGRES_PASSWORD=strong_password123
+POSTGRES_DB=app_db
+
+# PHP
+PHP_MEMORY_LIMIT=256M
+PHP_MAX_EXECUTION_TIME=300
 ```
 
-Ensure any sensitive paths or configurations are removed or replaced with placeholders when sharing the file.
+### Advanced Customization
+- **Nginx**: Edit `nginx.conf` for custom routing
+- **PHP**: Add extensions in `Dockerfile`
+- **Timezone**: Configure in `php.ini`
 
-### 3. Start the Services
+## System Management 🕹️
 
-To start all the services (Nginx, PHP-FPM, and PostgreSQL), run the following command:
+| Command               | Description                      |
+|-----------------------|----------------------------------|
+| `./manage.sh start`   | Start all services              |
+| `./manage.sh stop`    | Stop services                   |
+| `./manage.sh status`  | Show container status           |
+| `./manage.sh logs`    | View Nginx logs                 |
+
+## Docker Services 🐳
+
+### 1. PHP Application (`php-app`)
+- PHP 8.3 FPM with pdo_pgsql
+- Automatic ENV-based configuration
+- Workdir: `/var/www/html`
+
+### 2. Nginx Server (`nginx-web`)
+- Reverse proxy for PHP
+- Port mapping: `8080:80`
+- Security headers + GZIP compression
+
+### 3. PostgreSQL Database (`postgres-db`)
+- Persistent storage via Docker volume
+- Automatic health checks
+- Backup via `pg_dump`
+
+## Testing ✅
 
 ```bash
-docker-compose up -d --build
+# Check database status
+curl http://localhost:8080/status
+
+# Sample response:
+# {"status": "healthy", "database": "connected"}
 ```
 
-This command will build and start the containers in detached mode.
+## Security Notes 🔒
+1. Never commit `.env` file
+2. Use SSL in production (Let's Encrypt)
+3. Regularly update Docker images
 
-### 4. Verify Services
-
-You can verify that all services are running correctly by checking their status:
-
-```bash
-docker-compose ps
-```
-
-You can also check the logs for Nginx:
-
-```bash
-docker-compose logs -f nginx
-```
-
-### 5. Health Check
-
-You can verify that PHP-FPM is running by visiting the `/health` endpoint:
-
-```bash
-http://localhost/health
-```
-
-This will return a JSON response indicating whether PHP-FPM is healthy:
-
-```json
-{"status": "healthy"}
-```
-
-### 6. Stopping Services
-
-To stop all services, use the following command:
-
-```bash
-docker-compose down
-```
-
-If you want to remove volumes and delete all persisted data, you can add the `--volumes` flag:
-
-```bash
-docker-compose down --volumes
-```
-
-### 7. Customization
-
-- **Nginx Configuration**: The Nginx configuration is located in the `nginx.conf` file. You can adjust the server settings, add more locations, or modify headers based on your needs.
-- **PHP Extensions**: Additional PHP extensions can be installed by modifying the `Dockerfile` and rebuilding the PHP container.
-- **Error Pages**: Custom error pages are defined for 404 and 50x errors. You can customize them by editing the `404.html` and `50x.html` files in the `html` directory.
-
-## Docker Compose Services
-
-### Nginx
-
-- Serves as the reverse proxy for the PHP application.
-- Exposes port 80 to the host.
-- Configured to process PHP files through PHP-FPM.
-
-### PHP-FPM
-
-- Runs PHP 8.4 and handles PHP processing.
-- Exposes port 9000 for communication with Nginx.
-
-### PostgreSQL (Optional)
-
-- Runs PostgreSQL and is configured with environment variables for user, password, and database name.
-- Persists data using a Docker volume.
-
-## Conclusion
-
-This setup provides a basic environment for running a PHP application with Nginx and PostgreSQL, making it easy to get started with containerized web applications. You can further extend this setup by adding more services, scaling the application, or integrating other components like Redis or a cache layer.
+## Extending Functionality ➕
+- Add Redis for caching: modify `docker-compose.yml`
+- Implement cron jobs in PHP container
+- Use `docker-compose.override.yml` for local development
 
 ---
 
-**Note**: When deploying to production, ensure all sensitive data such as database credentials are properly managed, and configuration files are appropriately secured.
-
+**License**: [MIT](LICENSE)  
+**Author**: Matej Martinović  
+**Version**: 1.1.0
 ```
