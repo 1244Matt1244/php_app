@@ -1,3 +1,41 @@
+# Node.js specific
 node_modules/
 .git/
 .env
+
+# Add these for enhanced security
+**/.git
+**/.env
+**/secrets/
+**/aws-credentials
+
+# Development artifacts
+dist/
+build/
+*.log
+logs/
+
+# IDE configurations
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Docker files themselves
+Dockerfile
+.dockerignore
+docker-compose*.yml
+
+# Temporary files
+tmp/
+*.tmp
+
+# Documentation (if not needed in image)
+*.md
+LICENSE
+
+# PHP-specific
+.phpunit.result.cache
+composer.lock
+vendor/
+*.phar
